@@ -1,0 +1,58 @@
+---
+- hosts: ipa
+  remote_user: centos 
+  become: true
+  tasks:
+    - name: add dns
+      shell: |
+        echo 'nameserver 8.8.8.8' >> /etc/resolv.conf
+
+    - name: upgrade all packages
+      yum:
+         name: '*'
+         state: latest
+         
+    - name: fix hostname
+      shell: |
+        hostnamectl set-hostname ipa.keycloak.test
+        echo '{{ host_ip_address }} ipa.keycloak.test' >> /etc/hosts
+
+    - name: install FreeIPA software    
+      yum:
+        name: freeipa-server-dns
+        state: latest
+
+    - name: install server
+      command: >
+           ipa-server-install
+           --realm KEYCLOAK.TEST 
+           --ds-password PASSWORD
+           --admin-password PASSWORD 
+           --hostname ipa.keycloak.test
+           --ip-address {{ host_ip_address }}           
+           --unattended 
+
+      #install python2-firewall first for next time
+    - name: install python2-firewall 
+      yum:
+        name: python2-firewall
+        name: firewalld
+        state: latest
+
+
+    - name: open ports
+      firewalld:
+        port: 80/tcp
+        port: 443/tcp #can i just do -443/tcp instead of port: 443/tcp?
+        port: 389/tcp
+        port: 636/tcp
+        port: 88/tcp
+        port: 464/tcp
+        port: 88/udp
+        port: 464/udp
+        port: 12/udp
+        permanent: true
+        state: enabled 
+
+
+- include: /home/mbeliveau/ansible/roles/keycloak/tasks/main.yml
