@@ -1,0 +1,161 @@
+---
+- hosts: keycloak
+  remote_user: centos
+  become: true
+  tasks:
+    - name: fix dns
+      shell: |
+        echo 'nameserver 8.8.8.8' >> /etc/resolv.conf
+
+    - name: installing yum
+      yum:
+        name: yum 
+        state: latest
+
+    - name: update all packages
+      yum:
+         name: '*'
+         state: latest
+
+    - name: set host name
+      shell: |
+         hostnamectl set-hostname idp.keycloak.test
+         echo '{{ host_ip_address }} idp.keycloak.test' >> /etc/hosts
+
+    - name: install freeIPA client software
+      yum:
+         name: freeipa-client
+         name: freeipa-admintools
+         state: latest
+
+    - name: setup freeIPA client
+      command: >
+           ipa-client-install
+           --fixed-primary
+           --server ipa.keycloak.test
+           --domain keycloak.test
+           --principal admin
+           --password PASSWORD
+           --unattended
+           --force-join
+
+    - name: install java
+      yum:
+        name: java-1.8.0-openjdk
+        state: latest
+
+    - name: install wget
+      command: yum install wget -y
+
+    - name: install keycloak
+      shell: |
+          KEYCLOAK_HOME=/usr/local/keycloak/keycloak-2.4.0.Final
+          mkdir -p /usr/local/keycloak/-2.4.0.Final
+          cd /usr/local/keycloak
+          wget --no-check-certificate https://downloads.jboss.org/keycloak/2.4.0.Final/keycloak-2.4.0.Final.tar.gz
+           tar zxvf keycloak-2.4.0.Final.tar.gz   
+
+    - name: create systemd service
+      shell: |
+         KEYCLOAK_HOME=/usr/local/keycloak/keycloak-2.4.0.Final
+         cd $KEYCLOAK_HOME/docs/contrib/scripts/systemd/
+         mkdir /etc/keycloak
+         mkdir /var/run/keycloak
+         sed -e 's/wildfly/keycloak/g' -e 's/WILDFLY/KEYCLOAK/g' -e "s/KEYCLOAK_BIND=0.0.0.0/KEYCLOAK_BIND=$(hostname -i)/g" wildfly.conf > /etc/keycloak/keycloak.conf
+         sed -e 's/wildfly/keycloak/g' -e 's/WILDFLY/KEYCLOAK/g' -e "s%KEYCLOAK_HOME=.*%KEYCLOAK_HOME=$KEYCLOAK_HOME%" launch.sh > $KEYCLOAK_HOME/bin/launch.sh
+         chmod 755 $KEYCLOAK_HOME/bin/launch.sh
+         sed -e 's/User=.*/User=root/g' -e 's/wildfly/keycloak/g' -e 's/WILDFLY/KEYCLOAK/g' -e 's/Description=.*/Description=Keycloak Identity Provider/g' -e "s%/opt/keycloak/bin%$KEYCLOAK_HOME/bin%" wildfly.service > /etc/systemd/system/keycloak.service
+         cd
+
+    - name: create admin user
+      shell: |
+          KEYCLOAK_HOME=/usr/local/keycloak/keycloak-2.4.0.Final
+          $KEYCLOAK_HOME/bin/add-user-keycloak.sh -r master -u admin -p PASSWORD
+
+    - name: start keycloak service
+      systemd:
+        name: keycloak
+        state: started
+        enabled: true
+
+    - name: install python-firewall
+      yum:
+        name: python2-firewall
+        name: firewalld
+        state: latest
+
+    - name: open ports
+      firewalld:
+         port: 8080/tcp
+         port: 8443/tcp
+         permanent: true
+         state: enabled
+
+    - name: create http service
+      shell: |
+        echo PASSWORD|kinit admin
+        ipa service-add HTTP/idp.keycloak.test@KEYCLOAK.TEST
+        ipa-getkeytab -s ipa.keycloak.test -p HTTP/idp.keycloak.test@KEYCLOAK.TEST -k /etc/ipa.keytab
+
+    - name: generate java keystore
+      shell: |
+         keytool -genkey -alias keycloak.test -dname "CN=idp.keycloak.test, OU=Keycloak, O=Red Hat, L=Westford, ST=MA, C=US" -keyalg RSA -keystore keycloak.jks -storepass PASSWORD -keypass PASSWORD -validity 10950
+
+    - name: generate cert request
+      shell: |
+         echo PASSWORD|keytool -certreq -alias keycloak.test -keystore keycloak.jks > keycloak.careq
+
+    - name: sign certificate 
+      shell: |
+        ipa cert-request --principal HTTP/idp.keycloak.test@KEYCLOAK.TEST keycloak.careq
+ 
+    - name: export certificate 
+      command: ipa service-show HTTP/idp.keycloak.test --out keycloak.cert
+
+    - name: import CA
+      shell: |
+        cp -u /etc/ipa/ca.crt .
+        echo yes|keytool -import -keystore keycloak.jks -file ca.crt -alias root -storepass PASSWORD
+
+    - name: import signed cert
+      command: keytool -import -keystore keycloak.jks -file keycloak.cert -alias keycloak.test -storepass PASSWORD 
+
+    - name: configure HTTPS #don't know if this one worked or not
+      shell: |
+         cat > cfgpatch1 <<EOF
+                      <security-realm name="UndertowRealm">
+                          <server-identities>
+                              <ssl>
+                                  <keystore path="keycloak.jks" relative-to="jboss.server.config.dir" keystore-password="PASSWORD" />
+                              </ssl>
+                          </server-identities>
+                      </security-realm>
+          EOF
+         sed -i '/<security-realms>/r cfgpatch1' standalone.xml
+         cat > cfgpatch2 <<EOF
+                          <https-listener name="https" socket-binding="https" security-realm="UndertowRealm"/>
+          EOF
+         sed -i '/default-server/r cfgpatch2' standalone.xml
+
+    - name: restart keycloak
+      command: systemctl restart keycloak
+
+    - name: install jna, sssd-dbus
+      shell: |
+        yum -y install jna
+        yum -y install sssd-dbus
+        yum -y install https://github.com/keycloak/libunix-dbus-java/releases/download/libunix-dbus-java-0.8.0/libunix-dbus-java-0.8.0-1.fc24.x86_64.rpm
+
+    - name: setup SSSD federation
+      shell: |
+        KEYCLOAK_HOME=/usr/local/keycloak/keycloak-2.4.0.Final
+        cd $KEYCLOAK_HOME
+        bin/federation-sssd-setup.sh
+        systemctl restart sssd
+        systemctl restart keycloak
+
+
+
+
+
+
