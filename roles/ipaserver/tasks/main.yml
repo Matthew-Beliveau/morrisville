@@ -21,13 +21,13 @@
     - name: install server
       command: >
            ipa-server-install
-           --realm KEYCLOAK2.TEST 
-           --ds-password PASSWORD
-           --admin-password PASSWORD 
-           --hostname ipa2.keycloak.test
+           --realm {{ ipa_realm }} 
+           --ds-password {{ ipa_dm_password }}
+           --admin-password {{ ipa_admin_password }}
+           --hostname ipa.keycloak.test
            --ip-address {{ host_ip_address }}
            --setup-dns
-           --forwarder 127.0.0.1            
+           --forwarder 8.8.8.8            
            --unattended 
 
       #install python2-firewall first for next time
@@ -52,5 +52,3 @@
         permanent: true
         state: enabled 
 
-
-        #- include: /home/mbeliveau/ansible/roles/keycloak/tasks/main.yml
