@@ -1,0 +1,6 @@
+- hosts: keycloak
+  remote_user: centos
+  become: true
+  roles:
+    - ipaclient
+    - keycloak

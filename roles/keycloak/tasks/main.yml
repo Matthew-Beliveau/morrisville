@@ -1,17 +1,4 @@
 ---
-- hosts: keycloak
-  remote_user: centos
-  become: true
-  tasks:
-    - name: fix dns
-      shell: |
-        echo 'nameserver 8.8.8.8' >> /etc/resolv.conf
-
-    - name: installing yum
-      yum:
-        name: yum 
-        state: latest
-
     - name: update all packages
       yum:
          name: '*'
@@ -21,23 +8,6 @@
       shell: |
          hostnamectl set-hostname idp.keycloak.test
          echo '{{ host_ip_address }} idp.keycloak.test' >> /etc/hosts
-
-    - name: install freeIPA client software
-      yum:
-         name: freeipa-client
-         name: freeipa-admintools
-         state: latest
-
-    - name: setup freeIPA client
-      command: >
-           ipa-client-install
-           --fixed-primary
-           --server ipa.keycloak.test
-           --domain keycloak.test
-           --principal admin
-           --password PASSWORD
-           --unattended
-           --force-join
 
     - name: install java
       yum:
