@@ -1,5 +1,10 @@
 - hosts: keycloak
   remote_user: centos
+  tags: all
+  tasks: []
+
+- hosts: keycloak
+  remote_user: centos 
   become: true
   roles:
     - ipaclient

@@ -1,5 +1,7 @@
 ---
-
+- name: fix dns
+  shell: |
+    echo 'nameserver {{ ipa_host_ip }}' >> /etc/resolv.conf
 
 - name: upgrade all packages
   yum:
@@ -8,18 +10,19 @@
 
 - name: install ipa client packages
   yum:
-    name=ipa-client, ipa-admintools
-    state=present
+    name:  ipa-client, ipa-admintools
+    state: latest
 
 #need to figure out how to make the DNS
-- name: fix dns
+- name: add hostname
   shell: |
-    echo 'nameserver {{ ipa_host_ip }}' >> /etc/resolv.conf 
+    hostnamectl set-hostname {{ idp_host_name }} 
+    echo '{{ host_ip_address }} {{ idp_host_name }}' >> /etc/hosts 
 
 - name: make IPA client
   command: >
     ipa-client-install -U
     --fixed-primary
-    --principal admin@{{ ipa_realm }}
-    --password {{ ipa_admin_password }}
+    --principal admin
+    --password PASSWORD
     --force-join

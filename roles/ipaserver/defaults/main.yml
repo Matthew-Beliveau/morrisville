@@ -2,4 +2,4 @@
 ipa_admin_password: PASSWORD
 ipa_dm_password: PASSWORD
 ipa_realm: KEYCLOAK.TEST
-ipa_host_ip: {{ host_ip_address }} #I don't think this will work
+ipa_host_ip: 192.168.0.10 #I don't think this will work

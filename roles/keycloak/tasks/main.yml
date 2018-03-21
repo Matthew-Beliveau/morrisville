@@ -6,8 +6,8 @@
 
     - name: set host name
       shell: |
-         hostnamectl set-hostname idp.keycloak.test
-         echo '{{ host_ip_address }} idp.keycloak.test' >> /etc/hosts
+         hostnamectl set-hostname idp2.keycloak.test
+         echo '{{ host_ip_address }} {{ idp_host_name }}' >> /etc/hosts
 
     - name: install java
       yum:
@@ -19,15 +19,15 @@
 
     - name: install keycloak
       shell: |
-          KEYCLOAK_HOME=/usr/local/keycloak/keycloak-2.4.0.Final
-          mkdir -p /usr/local/keycloak/-2.4.0.Final
+          KEYCLOAK_HOME=/usr/local/keycloak/keycloak-3.4.3.Final
+          mkdir -p /usr/local/keycloak/-3.4.3.Final
           cd /usr/local/keycloak
-          wget --no-check-certificate https://downloads.jboss.org/keycloak/2.4.0.Final/keycloak-2.4.0.Final.tar.gz
-           tar zxvf keycloak-2.4.0.Final.tar.gz   
+          wget --no-check-certificate https://downloads.jboss.org/keycloak/3.4.3.Final/keycloak-3.4.3.Final.tar.gz
+           tar zxvf keycloak-3.4.3.Final.tar.gz   
 
     - name: create systemd service
       shell: |
-         KEYCLOAK_HOME=/usr/local/keycloak/keycloak-2.4.0.Final
+         KEYCLOAK_HOME=/usr/local/keycloak/keycloak-3.4.3.Final
          cd $KEYCLOAK_HOME/docs/contrib/scripts/systemd/
          mkdir /etc/keycloak
          mkdir /var/run/keycloak
@@ -39,7 +39,7 @@
 
     - name: create admin user
       shell: |
-          KEYCLOAK_HOME=/usr/local/keycloak/keycloak-2.4.0.Final
+          KEYCLOAK_HOME=/usr/local/keycloak/keycloak-3.4.3.Final
           $KEYCLOAK_HOME/bin/add-user-keycloak.sh -r master -u admin -p PASSWORD
 
     - name: start keycloak service
@@ -64,34 +64,50 @@
     - name: create http service
       shell: |
         echo PASSWORD|kinit admin
-        ipa service-add HTTP/idp.keycloak.test@KEYCLOAK.TEST
-        ipa-getkeytab -s ipa.keycloak.test -p HTTP/idp.keycloak.test@KEYCLOAK.TEST -k /etc/ipa.keytab
+        ipa service-add HTTP/{{ idp_host_name }}@KEYCLOAK.TEST
+        ipa-getkeytab -s ipa.keycloak.test -p HTTP/{{ idp_host_name }}@KEYCLOAK.TEST -k /etc/ipa.keytab
 
     - name: generate java keystore
       shell: |
-         keytool -genkey -alias keycloak.test -dname "CN=idp.keycloak.test, OU=Keycloak, O=Red Hat, L=Westford, ST=MA, C=US" -keyalg RSA -keystore keycloak.jks -storepass PASSWORD -keypass PASSWORD -validity 10950
+         KEYCLOAK_HOME=/usr/local/keycloak/keycloak-3.4.3.Final
+         cd $KEYCLOAK_HOME/standalone/configuration     
+         keytool -genkey -alias keycloak.test -dname "CN={{ idp_host_name }}, OU=Keycloak, O=Red Hat, L=Westford, ST=MA, C=US" -keyalg RSA -keystore keycloak.jks -storepass PASSWORD -keypass PASSWORD -validity 10950
 
     - name: generate cert request
       shell: |
+         KEYCLOAK_HOME=/usr/local/keycloak/keycloak-3.4.3.Final
+         cd $KEYCLOAK_HOME/standalone/configuration
          echo PASSWORD|keytool -certreq -alias keycloak.test -keystore keycloak.jks > keycloak.careq
 
     - name: sign certificate 
       shell: |
-        ipa cert-request --principal HTTP/idp.keycloak.test@KEYCLOAK.TEST keycloak.careq
+        KEYCLOAK_HOME=/usr/local/keycloak/keycloak-3.4.3.Final
+        cd $KEYCLOAK_HOME/standalone/configuration
+        ipa cert-request --principal HTTP/{{ idp_host_name }}@KEYCLOAK.TEST keycloak.careq
  
     - name: export certificate 
-      command: ipa service-show HTTP/idp.keycloak.test --out keycloak.cert
+      shell: |
+        KEYCLOAK_HOME=/usr/local/keycloak/keycloak-3.4.3.Final
+        cd $KEYCLOAK_HOME/standalone/configuration
+        ipa service-show HTTP/{{ idp_host_name }} --out keycloak.cert
 
     - name: import CA
       shell: |
-        cp -u /etc/ipa/ca.crt .
+        KEYCLOAK_HOME=/usr/local/keycloak/keycloak-3.4.3.Final
+        cd $KEYCLOAK_HOME/standalone/configuration
+        cp -i /etc/ipa/ca.crt .
         echo yes|keytool -import -keystore keycloak.jks -file ca.crt -alias root -storepass PASSWORD
 
-    - name: import signed cert
-      command: keytool -import -keystore keycloak.jks -file keycloak.cert -alias keycloak.test -storepass PASSWORD 
+    - name: import signed cert # doesn't really work right now for some reason
+      shell: |
+        KEYCLOAK_HOME=/usr/local/keycloak/keycloak-3.4.3.Final
+        cd $KEYCLOAK_HOME/standalone/configuration
+        echo PASSWORD|keytool -import -keystore keycloak.jks -file keycloak.cert -alias keycloak.test -storepass PASSWORD 
 
     - name: configure HTTPS #don't know if this one worked or not
       shell: |
+         KEYCLOAK_HOME=/usr/local/keycloak/keycloak-3.4.3.Final
+         cd $KEYCLOAK_HOME/standalone/configuration     
          cat > cfgpatch1 <<EOF
                       <security-realm name="UndertowRealm">
                           <server-identities>
