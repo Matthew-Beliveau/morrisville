@@ -16,9 +16,10 @@
 #need to figure out how to make the DNS
 - name: add hostname
   shell: |
-    hostnamectl set-hostname {{ idp_host_name }} 
-    echo '{{ host_ip_address }} {{ idp_host_name }}' >> /etc/hosts 
+    hostnamectl set-hostname {{ host_name }} 
+    echo '{{ host_ip_address }} {{ host_name }}' >> /etc/hosts 
 
+#should be able to find server through DNS
 - name: make IPA client
   command: >
     ipa-client-install -U

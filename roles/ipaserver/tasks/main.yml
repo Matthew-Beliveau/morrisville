@@ -10,8 +10,8 @@
          
     - name: fix hostname
       shell: |
-        hostnamectl set-hostname ipa.keycloak.test
-        echo '{{ host_ip_address }} ipa2.keycloak.test' >> /etc/hosts
+        hostnamectl set-hostname {{ host_name }}
+        echo '{{ host_ip_address }} {{ host_name }}' >> /etc/hosts
 
     - name: install FreeIPA software    
       yum:
@@ -24,7 +24,7 @@
            --realm {{ ipa_realm }} 
            --ds-password {{ ipa_dm_password }}
            --admin-password {{ ipa_admin_password }}
-           --hostname ipa.keycloak.test
+           --hostname {{ host_name }}
            --ip-address {{ host_ip_address }}
            --setup-dns
            --forwarder 8.8.8.8            

@@ -1,2 +1,7 @@
 ---
-idp_host_name: idp2.keycloak.test
+keycloak_ver: 3.4.3.Final
+keycloak_home: /usr/local/keycloak/keycloak-{{ keycloak_ver }}
+ipa_server: ipa2.example.test
+ipa_realm: EXAMPLE.TEST
+domain_name: example.test
+
