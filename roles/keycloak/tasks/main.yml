@@ -25,14 +25,14 @@
           tar zxvf keycloak-{{ keycloak_ver }}.tar.gz   
 
     - name: create systemd service
-      shell: |
-         KEYCLOAK_HOME=/usr/local/keycloak/keycloak-3.4.3.Final
+      shell: |         
          cd {{ keycloak_home }}/docs/contrib/scripts/systemd/
          mkdir /etc/keycloak
          mkdir /var/run/keycloak
+         KEYCLOAK_HOME=/usr/local/keycloak/keycloak-3.4.3.Final
          sed -e 's/wildfly/keycloak/g' -e 's/WILDFLY/KEYCLOAK/g'  wildfly.conf > /etc/keycloak/keycloak.conf
          sed -e 's/wildfly/keycloak/g' -e 's/WILDFLY/KEYCLOAK/g' -e "s%KEYCLOAK_HOME=.*%KEYCLOAK_HOME=$KEYCLOAK_HOME%" launch.sh > $KEYCLOAK_HOME/bin/launch.sh
-         chmod 755 ${{ keycloak_home }}/bin/launch.sh
+         chmod 755 {{ keycloak_home }}/bin/launch.sh
          sed -e 's/User=.*/User=root/g' -e 's/wildfly/keycloak/g' -e 's/WILDFLY/KEYCLOAK/g' -e 's/Description=.*/Description=Keycloak Identity Provider/g' -e "s%/opt/keycloak/bin%$KEYCLOAK_HOME/bin%" wildfly.service > /etc/systemd/system/keycloak.service
          cd
 
