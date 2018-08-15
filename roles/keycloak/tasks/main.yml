@@ -1,31 +1,31 @@
 ---
     - name: update all packages
-      yum:
+      dnf:
          name: '*'
          state: latest
 
     - name: set host name
       shell: |
-        hostnamectl set-hostname {{ host_name }} 
-        echo '{{ host_ip_address }} {{ host_name }}' >> /etc/hosts
+        hostnamectl set-hostname {{ host_name }}
+        echo '{{ keycloak_ip }} {{ host_name }}' >> /etc/hosts
 
     - name: install java
-      yum:
+      dnf:
         name: java-1.8.0-openjdk
         state: latest
 
     - name: install wget
-      command: yum install wget -y
+      command: dnf install wget -y
 
     - name: install keycloak
       shell: |
-          mkdir -p {{ keycloak_home }} 
+          mkdir -p {{ keycloak_home }}
           cd /usr/local/keycloak
           wget --no-check-certificate https://downloads.jboss.org/keycloak/{{ keycloak_ver }}/keycloak-{{ keycloak_ver }}.tar.gz
-          tar zxvf keycloak-{{ keycloak_ver }}.tar.gz   
+          tar zxvf keycloak-{{ keycloak_ver }}.tar.gz
 
     - name: create systemd service
-      shell: |         
+      shell: |
          cd {{ keycloak_home }}/docs/contrib/scripts/systemd/
          mkdir /etc/keycloak
          mkdir /var/run/keycloak
@@ -47,7 +47,7 @@
         enabled: true
 
     - name: install python-firewall
-      yum:
+      dnf:
         name: python2-firewall
         name: firewalld
         state: latest
@@ -67,7 +67,7 @@
 
     - name: generate java keystore
       shell: |
-         cd {{ keycloak_home }}/standalone/configuration     
+         cd {{ keycloak_home }}/standalone/configuration
          keytool -genkey -alias {{ domain_name }} -dname "CN={{ host_name }}, OU=Keycloak, O=Red Hat, L=Westford, ST=MA, C=US" -keyalg RSA -keystore keycloak.jks -storepass PASSWORD -keypass PASSWORD -validity 10950
 
     - name: generate cert request
@@ -75,12 +75,12 @@
          cd {{ keycloak_home }}/standalone/configuration
          echo PASSWORD|keytool -certreq -alias {{ domain_name }} -keystore keycloak.jks > keycloak.careq
 
-    - name: sign certificate 
+    - name: sign certificate
       shell: |
         cd {{ keycloak_home }}/standalone/configuration
         ipa cert-request --principal HTTP/{{ host_name }}@{{ ipa_realm }} keycloak.careq
- 
-    - name: export certificate 
+
+    - name: export certificate
       shell: |
         cd {{ keycloak_home }}/standalone/configuration
         ipa service-show HTTP/{{ host_name }} --out keycloak.cert
@@ -92,36 +92,37 @@
         echo yes|keytool -import -keystore keycloak.jks -file ca.crt -alias root -storepass PASSWORD
 
     - name: import signed cert
-      shell: |        
-        cd {{ keycloak_home }}/standalone/configuration
-        echo PASSWORD|keytool -import -keystore keycloak.jks -file keycloak.cert -alias {{ domain_name }} -storepass PASSWORD 
-
-    - name: configure HTTPS #this doesn't work
       shell: |
-         cd {{ keycloak_home }}/standalone/configuration     
-         cat > cfgpatch1 <<EOF
-                      <security-realm name="UndertowRealm">
-                          <server-identities>
-                              <ssl>
-                                  <keystore path="keycloak.jks" relative-to="jboss.server.config.dir" keystore-password="PASSWORD" />
-                              </ssl>
-                          </server-identities>
-                      </security-realm>
-          EOF
-         sed -i '/<security-realms>/r cfgpatch1' standalone.xml
-         cat > cfgpatch2 <<EOF
-                          <https-listener name="https" socket-binding="https" security-realm="UndertowRealm"/>
-         EOF
-         sed -i '/default-server/r cfgpatch2' standalone.xml
+        cd {{ keycloak_home }}/standalone/configuration
+        echo PASSWORD|keytool -import -keystore keycloak.jks -file keycloak.cert -alias {{ domain_name }} -storepass PASSWORD
+
+    # This doesn't work and I will need to make a python script for
+    # - name: configure HTTPS #this doesn't work
+    #   shell: |
+    #      cd {{ keycloak_home }}/standalone/configuration
+    #      cat > cfgpatch1 <<EOF
+    #                   <security-realm name="UndertowRealm">
+    #                       <server-identities>
+    #                           <ssl>
+    #                               <keystore path="keycloak.jks" relative-to="jboss.server.config.dir" keystore-password="PASSWORD" />
+    #                           </ssl>
+    #                       </server-identities>
+    #                   </security-realm>
+    #       EOF
+    #      sed -i '/<security-realms>/r cfgpatch1' standalone.xml
+    #      cat > cfgpatch2 <<EOF
+    #                       <https-listener name="https" socket-binding="https" security-realm="UndertowRealm"/>
+    #      EOF
+    #      sed -i '/default-server/r cfgpatch2' standalone.xml
 
     - name: restart keycloak
       command: systemctl restart keycloak
 
     - name: install jna, sssd-dbus
       shell: |
-        yum -y install jna
-        yum -y install sssd-dbus
-        yum -y install https://github.com/keycloak/libunix-dbus-java/releases/download/libunix-dbus-java-0.8.0/libunix-dbus-java-0.8.0-1.fc24.x86_64.rpm
+        dnf -y install jna
+        dnf -y install sssd-dbus
+        dnf -y install https://github.com/keycloak/libunix-dbus-java/releases/download/libunix-dbus-java-0.8.0/libunix-dbus-java-0.8.0-1.fc24.x86_64.rpm
 
     - name: setup SSSD federation
       shell: |
@@ -129,9 +130,3 @@
         bin/federation-sssd-setup.sh
         systemctl restart sssd
         systemctl restart keycloak
-
-
-
-
-
-

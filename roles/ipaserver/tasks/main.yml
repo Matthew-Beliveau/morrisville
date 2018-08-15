@@ -1,47 +1,50 @@
 ---
     - name: add dns
-      shell: |
-        echo 'nameserver 8.8.8.8' >> /etc/resolv.conf
+      lineinfile:
+        path: /etc/resolv.conf
+        line: nameserver 1.1.1.1
 
     - name: upgrade all packages
-      yum:
+      dnf:
          name: '*'
          state: latest
-         
+
     - name: fix hostname
       shell: |
         hostnamectl set-hostname {{ host_name }}
-        echo '{{ host_ip_address }} {{ host_name }}' >> /etc/hosts
+        echo '{{ ipa_host_ip }} {{ host_name }}' >> /etc/hosts
 
-    - name: install FreeIPA software    
-      yum:
+    - name: install FreeIPA software
+      dnf:
         name: freeipa-server-dns
         state: latest
 
     - name: install server
       command: >
            ipa-server-install
-           --realm {{ ipa_realm }} 
+           --realm {{ ipa_realm }}
            --ds-password {{ ipa_dm_password }}
            --admin-password {{ ipa_admin_password }}
            --hostname {{ host_name }}
-           --ip-address {{ host_ip_address }}
+           --ip-address {{ ipa_host_ip }}
            --setup-dns
-           --forwarder 8.8.8.8            
-           --unattended 
+           --no-forwarders
+           --unattended
 
       #install python2-firewall first for next time
-    - name: install python2-firewall 
-      yum:
+    - name: install python2-firewall
+      dnf:
         name: python2-firewall
         name: firewalld
         state: latest
 
 
-    - name: open ports
+    - name: open ports #for some reason not opening the ports
       firewalld:
+        port: 53/tcp
+        port: 53/udp
         port: 80/tcp
-        port: 443/tcp #can i just do -443/tcp instead of port: 443/tcp?
+        port: 443/tcp
         port: 389/tcp
         port: 636/tcp
         port: 88/tcp
@@ -50,5 +53,4 @@
         port: 464/udp
         port: 12/udp
         permanent: true
-        state: enabled 
-
+        state: enabled

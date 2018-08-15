@@ -4,4 +4,4 @@ keycloak_home: /usr/local/keycloak/keycloak-{{ keycloak_ver }}
 ipa_server: ipa2.example.test
 ipa_realm: EXAMPLE.TEST
 domain_name: example.test
-
+keycloak_ip: "{{ ansible_ens3.ipv4.address }}" 

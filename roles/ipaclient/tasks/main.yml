@@ -1,23 +1,23 @@
 ---
 - name: fix dns
-  shell: |
-    echo 'nameserver {{ ipa_host_ip }}' >> /etc/resolv.conf
+  lineinfile:
+    path: /etc/resolv.conf
+    line: nameserver {{ ipa_host_ip }}
 
 - name: upgrade all packages
-  yum:
+  dnf:
     name: '*'
     state: latest
 
 - name: install ipa client packages
-  yum:
+  dnf:
     name:  ipa-client, ipa-admintools
     state: latest
 
-#need to figure out how to make the DNS
 - name: add hostname
   shell: |
-    hostnamectl set-hostname {{ host_name }} 
-    echo '{{ host_ip_address }} {{ host_name }}' >> /etc/hosts 
+    hostnamectl set-hostname {{ host_name }}
+    echo '{{ host_ip }} {{ host_name }}' >> /etc/hosts
 
 #should be able to find server through DNS
 - name: make IPA client
