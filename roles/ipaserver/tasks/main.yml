@@ -34,23 +34,26 @@
       #install python2-firewall first for next time
     - name: install python2-firewall
       dnf:
-        name: python2-firewall
-        name: firewalld
+        name:
+          - python2-firewall
+          - firewalld
         state: latest
 
 
-    - name: open ports #for some reason not opening the ports
-      firewalld:
-        port: 53/tcp
-        port: 53/udp
-        port: 80/tcp
-        port: 443/tcp
-        port: 389/tcp
-        port: 636/tcp
-        port: 88/tcp
-        port: 464/tcp
-        port: 88/udp
-        port: 464/udp
-        port: 12/udp
-        permanent: true
-        state: enabled
+    - name: open ports 
+      firewalld: port={{ item }}
+                 permanent=True
+                 state=enabled
+                 immediate=yes
+      with_items:
+          - 53/tcp
+          - 53/udp
+          - 80/tcp
+          - 443/tcp
+          - 389/tcp
+          - 636/tcp
+          - 88/tcp
+          - 464/tcp
+          - 88/udp
+          - 464/udp
+          - 12/udp

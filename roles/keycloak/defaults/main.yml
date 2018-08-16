@@ -1,7 +1,8 @@
 ---
 keycloak_ver: 3.4.3.Final
 keycloak_home: /usr/local/keycloak/keycloak-{{ keycloak_ver }}
-ipa_server: ipa2.example.test
-ipa_realm: EXAMPLE.TEST
-domain_name: example.test
-keycloak_ip: "{{ ansible_ens3.ipv4.address }}" 
+ipa_server: ipa.keycloak.test
+ipa_realm: KEYCLOAK.TEST
+domain_name: keycloak.test
+keycloak_ip: "{{ ansible_ens3.ipv4.address }}"
+host_name: idp.keycloak.test

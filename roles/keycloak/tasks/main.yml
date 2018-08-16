@@ -48,16 +48,19 @@
 
     - name: install python-firewall
       dnf:
-        name: python2-firewall
-        name: firewalld
+        name:
+         - python2-firewall
+         - firewalld
         state: latest
 
     - name: open ports
-      firewalld:
-         port: 8080/tcp
-         port: 8443/tcp
-         permanent: true
-         state: enabled
+      firewalld: port={{ item }}
+                 permanent=True
+                 state=enabled
+                 immediate=yes
+      with_items:
+           - 8080/tcp
+           - 8443/tcp
 
     - name: create http service
       shell: |
@@ -96,33 +99,23 @@
         cd {{ keycloak_home }}/standalone/configuration
         echo PASSWORD|keytool -import -keystore keycloak.jks -file keycloak.cert -alias {{ domain_name }} -storepass PASSWORD
 
-    # This doesn't work and I will need to make a python script for
-    # - name: configure HTTPS #this doesn't work
-    #   shell: |
-    #      cd {{ keycloak_home }}/standalone/configuration
-    #      cat > cfgpatch1 <<EOF
-    #                   <security-realm name="UndertowRealm">
-    #                       <server-identities>
-    #                           <ssl>
-    #                               <keystore path="keycloak.jks" relative-to="jboss.server.config.dir" keystore-password="PASSWORD" />
-    #                           </ssl>
-    #                       </server-identities>
-    #                   </security-realm>
-    #       EOF
-    #      sed -i '/<security-realms>/r cfgpatch1' standalone.xml
-    #      cat > cfgpatch2 <<EOF
-    #                       <https-listener name="https" socket-binding="https" security-realm="UndertowRealm"/>
-    #      EOF
-    #      sed -i '/default-server/r cfgpatch2' standalone.xml
+    - name: install python libraries
+      pip:
+        name: lxml
+
+    - name: configure HTTPS
+      script: xpath.py
 
     - name: restart keycloak
       command: systemctl restart keycloak
 
     - name: install jna, sssd-dbus
-      shell: |
-        dnf -y install jna
-        dnf -y install sssd-dbus
-        dnf -y install https://github.com/keycloak/libunix-dbus-java/releases/download/libunix-dbus-java-0.8.0/libunix-dbus-java-0.8.0-1.fc24.x86_64.rpm
+      dnf:
+        name:
+          - jna
+          - sssd-dbus
+          - https://github.com/keycloak/libunix-dbus-java/releases/download/libunix-dbus-java-0.8.0/libunix-dbus-java-0.8.0-1.fc24.x86_64.rpm
+        state: latest
 
     - name: setup SSSD federation
       shell: |
