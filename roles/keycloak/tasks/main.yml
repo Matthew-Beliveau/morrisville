@@ -1,6 +1,6 @@
 ---
     - name: update all packages
-      dnf:
+      yum:
          name: '*'
          state: latest
 
@@ -10,12 +10,12 @@
         echo '{{ keycloak_ip }} {{ host_name }}' >> /etc/hosts
 
     - name: install java
-      dnf:
+      yum:
         name: java-1.8.0-openjdk
         state: latest
 
     - name: install wget
-      command: dnf install wget -y
+      command: yum install wget -y
 
     - name: install keycloak
       shell: |
@@ -47,7 +47,7 @@
         enabled: true
 
     - name: install python-firewall
-      dnf:
+      yum:
         name:
          - python2-firewall
          - firewalld
@@ -99,9 +99,10 @@
         cd {{ keycloak_home }}/standalone/configuration
         echo PASSWORD|keytool -import -keystore keycloak.jks -file keycloak.cert -alias {{ domain_name }} -storepass PASSWORD
 
-    - name: install python libraries
-      pip:
-        name: lxml
+    - name: install python lxml libraries
+      yum:
+        name:
+          - python-lxml
 
     - name: configure HTTPS
       script: xpath.py
@@ -110,7 +111,7 @@
       command: systemctl restart keycloak
 
     - name: install jna, sssd-dbus
-      dnf:
+      yum:
         name:
           - jna
           - sssd-dbus

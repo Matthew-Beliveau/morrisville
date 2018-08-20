@@ -5,14 +5,21 @@
     regexp: '^nameserver'
     line: nameserver {{ ipa_host_ip }}
 
+- name: add 1.1.1.1 to resolv.conf
+  lineinfile:
+    path: /etc/resolv.conf
+    line: nameserver 1.1.1.1
+
 - name: upgrade all packages
-  dnf:
+  yum:
     name: '*'
     state: latest
 
 - name: install ipa client packages
-  dnf:
-    name:  ipa-client, ipa-admintools
+  yum:
+    name:
+      - ipa-client
+      - ipa-admintools
     state: latest
 
 - name: add hostname

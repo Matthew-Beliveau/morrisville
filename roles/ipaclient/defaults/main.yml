@@ -1,4 +1,4 @@
 ---
-ipa_host_ip: 192.168.100.195 # can't really automate this
-host_ip: "{{ ansible_ens3.ipv4.address }}"
+ipa_host_ip: 192.168.0.10
+host_ip: "{{ ansible_default_ipv4.address }}"
 host_name: idp.keycloak.test
