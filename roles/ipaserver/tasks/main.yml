@@ -5,7 +5,7 @@
         line: nameserver 1.1.1.1
 
     - name: upgrade all packages
-      dnf:
+      yum:
          name: '*'
          state: latest
 
@@ -15,7 +15,7 @@
         echo '{{ ipa_host_ip }} {{ host_name }}' >> /etc/hosts
 
     - name: install FreeIPA software
-      dnf:
+      yum:
         name: freeipa-server-dns
         state: latest
 
@@ -33,14 +33,14 @@
 
       #install python2-firewall first for next time
     - name: install python2-firewall
-      dnf:
+      yum:
         name:
           - python2-firewall
           - firewalld
         state: latest
 
 
-    - name: open ports 
+    - name: open ports
       firewalld: port={{ item }}
                  permanent=True
                  state=enabled

@@ -1,0 +1,105 @@
+---
+  - name: install software for apache and modules
+    yum:
+      name:
+        - httpd
+        - mod_auth_mellon
+        - mod_ssl
+        - openssl
+      state: latest
+
+  - name: Setup Apache Config for Private Dir
+    file:
+      path: {{ private_dir_path }}example_app_private.conf
+      state: touch
+
+    blockinfile:
+      path: {{ private_dir_path }}example_app_private.conf
+      block: |
+       <Directory /var/www/html/example_app/private>
+           Options +Includes
+           AddOutputFilter INCLUDES .html
+       </Directory>
+
+  - name: Setup Private Page
+    file:
+      path: {{ html_dir }}
+      state: directory
+
+    file:
+      path: {{ html_dir }}/index.html
+      state: touch
+
+    blockinfile:
+      path: {{ html_dir }}/index.html
+      block: |
+        <html><title>Secure</title>Hello there...from SP ...<br>
+        <a href="https://{{ hostname }}:8443/example_app/mellon/logout?ReturnTo=https://{{ hostname }}:8443/example_app/logged_out.html">Log out</a>
+        <hr>
+        <pre><!--#printenv --></pre>
+
+  - name: Setup Logged out page
+    file:
+      path: /var/www/html/example_app/logged_out.html
+      state: touch
+
+    blockinfile:
+      path: /var/www/html/example_app/logged_out.html
+      block: |
+        <html>
+        <title>Logout</title>
+        <p>
+        Congratulations, you've been logged out!
+        </p>
+        <p>
+        Now try to <a href="/example_app/private/">log back in</a>
+        </p>
+        </html>
+
+  - name: Setup SSL Config
+    shell: |
+      cp /etc/httpd/conf.d/ssl.conf /etc/httpd/conf.d/example_app_ssl.conf
+      sed -i 's/443/8443/g' /etc/httpd/conf.d/example_app_ssl.conf
+
+  - name: Install KHCI tool
+    yum:
+      name:
+        - keycloak-httpd-client-install
+        - python3-lxml
+      state: latest
+
+  - name: Setup Mellon client
+    command: >
+        keycloak-httpd-client-install
+        --client-originate-method registration
+        --keycloak-server-url https://{{ keycloak_server }}:8443
+        --keycloak-admin-username admin
+        --keycloak-admin-password PASSWORD
+        --app-name example_app
+        --keycloak-realm {{ realm }}
+        --mellon-root example_app
+        --mellon-https-port 8443
+        --mellon-protected-locations "/example_app/private"
+        --force
+
+  - name: start httpd
+    systemd:
+      state: started
+      name: httpd
+
+  - name: install firewalld
+    yum:
+      name:
+        - python2-firewall
+        - firewalld
+      state: latest
+
+  - name: open ports
+    firewalld: port={{ item }}
+               permanent=True
+               state=enabled
+               immediate=yes
+    with_items:
+      - 80/tcp
+      - 443/tcp
+      - 8443/tcp

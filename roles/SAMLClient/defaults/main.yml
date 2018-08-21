@@ -1,0 +1,5 @@
+hostname: sp1.keycloak.test
+private_dir_path: /etc/httpd/conf.d/
+html_dir: /var/www/html/example_app/private
+keycloak_server: idp.keycloak.test
+realm: master
