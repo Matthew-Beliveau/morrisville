@@ -42,7 +42,6 @@ def main():
     ssl.insert(0, keystore)
     server_identities.insert(0, ssl)
     security_realm.insert(0, server_identities)
-
     security_realms.insert(0, security_realm)
 
     # =====================================

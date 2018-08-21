@@ -1,4 +1,9 @@
 ---
+- name: upgrade all packages
+  yum:
+    name: '*'
+    state: latest
+
 - name: fix dns
   lineinfile:
     path: /etc/resolv.conf
@@ -9,11 +14,6 @@
   lineinfile:
     path: /etc/resolv.conf
     line: nameserver 1.1.1.1
-
-- name: upgrade all packages
-  yum:
-    name: '*'
-    state: latest
 
 - name: install ipa client packages
   yum:

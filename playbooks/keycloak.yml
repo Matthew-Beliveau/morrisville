@@ -1,10 +1,10 @@
 - hosts: keycloak
-  remote_user: centos
+  remote_user: golden
   tags: all
   tasks: []
 
 - hosts: keycloak
-  remote_user: centos
+  remote_user: golden
   become: true
   tasks:
     - debug: var=hostvars[inventory_hostname]['ansible_ens3']['ipv4']['address']

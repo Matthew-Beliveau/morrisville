@@ -15,7 +15,9 @@
         state: latest
 
     - name: install wget
-      command: yum install wget -y
+      yum:
+        name: wget
+        state: latest
 
     - name: install keycloak
       shell: |
@@ -97,7 +99,7 @@
     - name: import signed cert
       shell: |
         cd {{ keycloak_home }}/standalone/configuration
-        echo PASSWORD|keytool -import -keystore keycloak.jks -file keycloak.cert -alias {{ domain_name }} -storepass PASSWORD
+        echo PASSWORD|keytool -import -keystore keycloak.jks -file keycloak.cert -alias {{ domain_name }}
 
     - name: install python lxml libraries
       yum:

@@ -2,8 +2,6 @@
   remote_user: golden
   sudo: true
   gather_facts: True
-  tasks:
-    - debug: var=hostvars[inventory_hostname]['ansible_ens3']['ipv4']['address']
   tags:
     - ipa
   roles:
